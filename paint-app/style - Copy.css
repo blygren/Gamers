@@ -1,0 +1,101 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f0f0f0;
+}
+
+.container {
+    display: flex;
+    height: 100vh;
+    position: relative;
+}
+
+.toolbar {
+    width: 250px;
+    background-color: #333;
+    color: white;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    overflow-y: auto;
+}
+
+.tool-section, .color-section, .size-section, .actions, .brush-section, .extra-tools-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.tool, .brush {
+    padding: 8px;
+    border: none;
+    background-color: #555;
+    color: white;
+    cursor: pointer;
+    border-radius: 4px;
+    text-align: left;
+}
+
+.tool:hover, .brush:hover {
+    background-color: #777;
+}
+
+.tool.active, .brush.active {
+    background-color: #4CAF50;
+}
+
+#color-picker {
+    width: 100%;
+    height: 40px;
+}
+
+#brush-size {
+    width: 100%;
+}
+
+.actions button {
+    padding: 8px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.actions button:hover {
+    background-color: #45a049;
+}
+
+canvas {
+    flex: 1;
+    background-color: white;
+}
+
+h1, h3 {
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+h1 {
+    font-size: 1.5rem;
+}
+
+h3 {
+    font-size: 1.2rem;
+    border-bottom: 1px solid #555;
+    padding-bottom: 5px;
+}
+
+#box-indicator {
+    position: absolute;
+    border: 1px dashed rgba(0, 0, 0, 0.8);
+    background-color: rgba(0, 0, 0, 0.1);
+    pointer-events: none;
+    display: none;
+}

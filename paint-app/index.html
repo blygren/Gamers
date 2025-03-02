@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Paint App</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="toolbar">
+            <h1>Simple Paint</h1>
+            <div class="tool-section">
+                <button id="pencil" class="tool active">✏️ Pencil</button>
+                <button id="brush" class="tool">🖌️ Brush</button>
+                <button id="line" class="tool">📏 Line</button>
+                <button id="rectangle" class="tool">⬜ Rectangle</button>
+                <button id="circle" class="tool">⭕ Circle</button>
+                <button id="drip" class="tool">💧 Dripping Paint</button>
+                <button id="eraser" class="tool">🧽 Eraser</button>
+            </div>
+            
+            <div class="brush-section">
+                <h3>Brushes</h3>
+                <button id="round-brush" class="brush active">Round</button>
+                <button id="square-brush" class="brush">Square</button>
+                <button id="spray-brush" class="brush">Spray</button>
+                <button id="calligraphy-brush" class="brush">Calligraphy</button>
+                <button id="pattern-brush" class="brush">Pattern</button>
+            </div>
+            
+            <div class="extra-tools-section">
+                <h3>Extra Tools</h3>
+                <button id="fill" class="tool">🪣 Fill</button>
+                <button id="gradient" class="tool">🌈 Gradient</button>
+                <button id="text" class="tool">🔤 Text</button>
+                <button id="stamp" class="tool">🔖 Stamp</button>
+                <button id="symmetry" class="tool">↔️ Symmetry</button>
+            </div>
+            
+            <div class="more-tools-section">
+                <h3>More Tools</h3>
+                <button id="polygon" class="tool">🔶 Polygon</button>
+                <button id="curve" class="tool">↪️ Curve</button>
+                <button id="eyedropper" class="tool">👁️ Eyedropper</button>
+                <button id="grid" class="tool">📏 Grid</button>
+                <button id="rotate" class="tool">🔄 Rotate Canvas</button>
+                <button id="zoom" class="tool">🔍 Zoom</button>
+                <button id="select" class="tool">✂️ Selection</button>
+                <button id="mirror-h" class="tool">⏹️ H-Mirror</button>
+                <button id="crop" class="tool">📐 Crop</button>
+                <button id="image-import" class="tool">🖼️ Import Image</button>
+                <button id="blur" class="tool">🌫️ Blur/Smudge</button>
+                <button id="shape-detect" class="tool">🔷 Shape Detection</button>
+                <button id="emoji" class="tool">😊 Emoji</button>
+                <button id="neon" class="tool">💫 Neon Effect</button>
+                <button id="rainbow" class="tool">🌈 Rainbow Brush</button>
+            </div>
+            
+            <div class="cool-tools-section">
+                <h3>Cool Tools</h3>
+                <button id="chalk" class="tool">🖍️ Chalk</button>
+                <button id="oil" class="tool">🎨 Oil Paint</button>
+                <button id="watercolor" class="tool">💦 Watercolor</button>
+                <button id="pixel" class="tool">📐 Pixel Art</button>
+                <button id="dotted-line" class="tool">➿ Dotted Line</button>
+                <button id="highlight" class="tool">🟨 Highlighter</button>
+                <button id="charcoal" class="tool">✏️ Charcoal</button>
+                <button id="pattern-stamp" class="tool">🔁 Pattern</button>
+                <button id="magnify" class="tool">🔎 Magnify Area</button>
+                <button id="ruler" class="tool">📏 Ruler</button>
+            </div>
+            
+            <div class="special-tools-section">
+                <h3>Special Tools</h3>
+                <button id="triangle-text" class="tool">📐 Triangle Text</button>
+                <button id="rgb-draw" class="tool">🌈 RGB Drawing</button>
+                <button id="time-lapse" class="tool">⏱️ Time-lapse</button>
+                <button id="kaleidoscope" class="tool">❄️ Kaleidoscope</button>
+                <button id="particle" class="tool">✨ Particle Brush</button>
+                <button id="ai-style" class="tool">🎭 AI Style</button>
+            </div>
+            
+            <div class="color-section">
+                <label for="color-picker">Color:</label>
+                <input type="color" id="color-picker" value="#000000">
+            </div>
+            
+            <div class="size-section">
+                <label for="brush-size">Size:</label>
+                <input type="range" id="brush-size" min="1" max="50" value="5">
+                <span id="size-display">5</span>
+            </div>
+            
+            <div class="actions">
+                <button id="clear">Clear Canvas</button>
+                <button id="save">Save Image</button>
+            </div>
+        </div>
+        
+        <canvas id="canvas"></canvas>
+        <div id="box-indicator"></div>
+        
+        <!-- Hidden file input for image import -->
+        <input type="file" id="image-input" accept="image/*" style="display: none;">
+        
+        <!-- Time-lapse controls panel -->
+        <div id="time-lapse-controls" class="overlay-panel" style="display: none;">
+            <button id="start-recording">Start Recording</button>
+            <button id="stop-recording">Stop Recording</button>
+            <button id="play-recording">Play Recording</button>
+            <button id="close-time-lapse">Close</button>
+        </div>
+        
+        <!-- AI Style transfer panel -->
+        <div id="ai-style-panel" class="overlay-panel" style="display: none;">
+            <h4>Select Style</h4>
+            <div class="style-options">
+                <button class="style-option" data-style="impressionist">Impressionist</button>
+                <button class="style-option" data-style="cubism">Cubism</button>
+                <button class="style-option" data-style="pop-art">Pop Art</button>
+                <button class="style-option" data-style="van-gogh">Van Gogh</button>
+            </div>
+            <button id="close-ai-panel">Cancel</button>
+        </div>
+    </div>
+    
+    <script src="paint.js"></script>
+</body>
+</html>

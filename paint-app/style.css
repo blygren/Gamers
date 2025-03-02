@@ -1,0 +1,256 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f0f0f0;
+}
+
+.container {
+    display: flex;
+    height: 100vh;
+    position: relative;
+}
+
+.toolbar {
+    width: 250px;
+    background-color: #333;
+    color: white;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    overflow-y: auto;
+    max-height: 100vh;
+}
+
+.tool-section, .color-section, .size-section, .actions, 
+.brush-section, .extra-tools-section, .more-tools-section, .special-tools-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.tool, .brush {
+    padding: 8px;
+    border: none;
+    background-color: #555;
+    color: white;
+    cursor: pointer;
+    border-radius: 4px;
+    text-align: left;
+    transition: background-color 0.2s;
+}
+
+.tool:hover, .brush:hover {
+    background-color: #777;
+}
+
+.tool.active, .brush.active {
+    background-color: #4CAF50;
+}
+
+#color-picker {
+    width: 100%;
+    height: 40px;
+}
+
+#brush-size {
+    width: 100%;
+}
+
+.actions button {
+    padding: 8px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.actions button:hover {
+    background-color: #45a049;
+}
+
+canvas {
+    flex: 1;
+    background-color: white;
+}
+
+h1, h3 {
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+h1 {
+    font-size: 1.5rem;
+}
+
+h3 {
+    font-size: 1.2rem;
+    border-bottom: 1px solid #555;
+    padding-bottom: 5px;
+}
+
+#box-indicator {
+    position: absolute;
+    border: 1px dashed rgba(0, 0, 0, 0.8);
+    background-color: rgba(0, 0, 0, 0.1);
+    pointer-events: none;
+    display: none;
+}
+
+/* Scroll bar styling */
+.toolbar::-webkit-scrollbar {
+    width: 8px;
+}
+
+.toolbar::-webkit-scrollbar-track {
+    background: #444;
+    border-radius: 5px;
+}
+
+.toolbar::-webkit-scrollbar-thumb {
+    background: #666;
+    border-radius: 5px;
+}
+
+.toolbar::-webkit-scrollbar-thumb:hover {
+    background: #888;
+}
+
+/* Grid overlay */
+#grid-overlay {
+    position: absolute;
+    top: 0;
+    left: 250px; /* Align with canvas */
+    pointer-events: none;
+    opacity: 0.2;
+    display: none;
+}
+
+/* Tool tips */
+.tool[title]:hover::after, .brush[title]:hover::after {
+    content: attr(title);
+    position: absolute;
+    background: #333;
+    color: white;
+    padding: 5px;
+    border-radius: 3px;
+    font-size: 12px;
+    z-index: 100;
+    margin-left: 10px;
+}
+
+/* Additional styles for new tools */
+.cool-tools-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.overlay-panel {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: #333;
+    border-radius: 8px;
+    padding: 15px;
+    color: white;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    z-index: 100;
+}
+
+#time-lapse-controls button,
+#ai-style-panel button {
+    padding: 8px;
+    margin: 5px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+#time-lapse-controls button:hover,
+#ai-style-panel button:hover {
+    background-color: #45a049;
+}
+
+.style-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+
+.style-option {
+    width: 80px;
+    height: 80px;
+    border: 2px solid #666;
+    border-radius: 4px;
+}
+
+.style-option[data-style="impressionist"] {
+    background: linear-gradient(135deg, #83a4d4, #b6fbff);
+}
+
+.style-option[data-style="cubism"] {
+    background: linear-gradient(45deg, #4facfe, #00f2fe);
+}
+
+.style-option[data-style="pop-art"] {
+    background: linear-gradient(to right, #f953c6, #b91d73);
+}
+
+.style-option[data-style="van-gogh"] {
+    background: linear-gradient(to right, #f7b733, #fc4a1a);
+}
+
+/* Animation for particle tool */
+@keyframes particle-fade {
+    0% { opacity: 1; transform: scale(1); }
+    100% { opacity: 0; transform: scale(2); }
+}
+
+.particle {
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+    animation: particle-fade 1s forwards;
+}
+
+/* For magnify tool */
+#magnify-glass {
+    position: absolute;
+    border-radius: 50%;
+    border: 2px solid black;
+    pointer-events: none;
+    display: none;
+    box-shadow: 0 0 10px rgba(0,0,0,0.5);
+    overflow: hidden;
+}
+
+/* Ruler overlay */
+#ruler-overlay {
+    position: absolute;
+    pointer-events: none;
+    display: none;
+    top: 0;
+    left: 250px;
+}
+
+.ruler-measurement {
+    position: absolute;
+    background-color: rgba(0,0,0,0.7);
+    color: white;
+    padding: 2px 5px;
+    border-radius: 3px;
+    font-size: 12px;
+    pointer-events: none;
+}
