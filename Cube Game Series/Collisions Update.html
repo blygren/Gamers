@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Physics Playground – Shapes & Collisions</title>
+  <style>
+    /* Reset & layout */
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      height: 100%;
+    }
+    
+    /* Animated Background */
+    #background {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+      background: linear-gradient(45deg, #ff0000, #0000ff, #00ff00);
+      background-size: 300% 300%;
+      animation: gradientAnimation 20s ease infinite;
+    }
+    @keyframes gradientAnimation {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    
+    /* Scene container */
+    #scene {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+    
+    /* Spawn Menu */
+    .menu {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      z-index: 100;
+      background: rgba(0, 0, 0, 0.6);
+      padding: 10px;
+      border-radius: 5px;
+      display: flex;
+      gap: 5px;
+      flex-wrap: wrap;
+    }
+    
+    .menu button {
+      padding: 6px 10px;
+      border: none;
+      border-radius: 3px;
+      background: #fff;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+    
+    /* Common styling for all bodies */
+    .body {
+      position: absolute;
+      width: 100px;
+      height: 100px;
+      transform: translate(-50%, -50%);
+      cursor: grab;
+      user-select: none;
+    }
+    
+    /* Cube style */
+    .cube {
+      background: rgba(0, 125, 255, 0.8);
+      border: 2px solid #fff;
+    }
+    
+    /* Circle style */
+    .circle {
+      background: rgba(255, 125, 0, 0.8);
+      border: 2px solid #fff;
+      border-radius: 50%;
+    }
+    
+    /* Triangle style using clip-path for an equilateral triangle */
+    .triangle {
+      background: rgba(125, 0, 255, 0.8);
+      border: 2px solid #fff;
+      clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+    }
+  </style>
+</head>
+<body>
+  <!-- Animated Background -->
+  <div id="background"></div>
+  
+  <!-- Spawn Menu -->
+  <div class="menu">
+    <button id="spawnCube">Spawn Cube</button>
+    <button id="spawnCircle">Spawn Circle</button>
+    <button id="spawnTriangle">Spawn Triangle</button>
+  </div>
+  
+  <!-- Scene container for bodies -->
+  <div id="scene"></div>
+  
+  <script>
+    /********************************
+     * Global Physics Parameters
+     ********************************/
+    let gravity = 980;      // pixels per second²
+    let airFriction = 0.99; // damping factor each frame on horizontal velocity
+    let bounceFactor = 0.7; // restitution coefficient for bounces
+
+    /********************************
+     * Global Variables
+     ********************************/
+    const bodies = []; // array to hold all spawned bodies
+    const scene = document.getElementById('scene');
+    let activeBody = null; // the body currently being dragged
+
+    // All bodies use the same size; for collision we'll approximate them as circles.
+    const SIZE = 100; 
+    const RADIUS = SIZE / 2;  // 50px radius
+
+    /********************************
+     * Body Class
+     * Handles creation, dragging, and updating.
+     ********************************/
+    class Body {
+      constructor(shapeType) {
+        this.type = shapeType;  // "cube", "circle", or "triangle"
+        // Position relative to window center (0,0 is center)
+        this.currentX = 0;  
+        this.currentY = 0;
+        this.vx = 0;
+        this.vy = 0;
+        this.radius = RADIUS;
+        this.isDragging = false;
+        // Drag offsets (difference between pointer and body position)
+        this.dragStartOffsetX = 0;
+        this.dragStartOffsetY = 0;
+        this.lastDragX = 0;
+        this.lastDragY = 0;
+        this.lastDragTime = performance.now();
+        
+        // Create the HTML element.
+        this.element = document.createElement('div');
+        this.element.classList.add('body', shapeType);
+        // Initially position the element at the center.
+        this.updatePosition();
+        
+        // Add event listeners for dragging.
+        this.element.addEventListener('mousedown', (e) => {
+          e.stopPropagation();
+          this.startDrag(e.clientX, e.clientY);
+        });
+        this.element.addEventListener('touchstart', (e) => {
+          e.stopPropagation();
+          const touch = e.touches[0];
+          this.startDrag(touch.clientX, touch.clientY);
+        });
+        
+        scene.appendChild(this.element);
+      }
+      
+      startDrag(clientX, clientY) {
+        activeBody = this;
+        this.isDragging = true;
+        // Calculate the offset between pointer and the body's current position.
+        this.dragStartOffsetX = clientX - this.currentX;
+        this.dragStartOffsetY = clientY - this.currentY;
+        this.lastDragX = this.currentX;
+        this.lastDragY = this.currentY;
+        this.lastDragTime = performance.now();
+        this.element.style.cursor = 'grabbing';
+      }
+      
+      updatePosition() {
+        // Update the CSS transform to position the body.
+        this.element.style.transform =
+          `translate(calc(-50% + ${this.currentX}px), calc(-50% + ${this.currentY}px))`;
+      }
+    }
+
+    /********************************
+     * Spawn Functions
+     ********************************/
+    function spawnBody(type) {
+      const body = new Body(type);
+      bodies.push(body);
+    }
+    
+    // Set up the spawn menu button event listeners.
+    document.getElementById('spawnCube').addEventListener('click', () => spawnBody("cube"));
+    document.getElementById('spawnCircle').addEventListener('click', () => spawnBody("circle"));
+    document.getElementById('spawnTriangle').addEventListener('click', () => spawnBody("triangle"));
+    
+    /********************************
+     * Global Drag Event Handlers
+     ********************************/
+    document.addEventListener('mousemove', (e) => {
+      if (activeBody && activeBody.isDragging) {
+        const now = performance.now();
+        const newX = e.clientX - activeBody.dragStartOffsetX;
+        const newY = e.clientY - activeBody.dragStartOffsetY;
+        const dt = now - activeBody.lastDragTime;
+        if (dt > 0) {
+          // Calculate velocity (in pixels per second)
+          activeBody.vx = ((newX - activeBody.lastDragX) / dt) * 1000;
+          activeBody.vy = ((newY - activeBody.lastDragY) / dt) * 1000;
+        }
+        activeBody.currentX = newX;
+        activeBody.currentY = newY;
+        activeBody.lastDragX = newX;
+        activeBody.lastDragY = newY;
+        activeBody.lastDragTime = now;
+        activeBody.updatePosition();
+      }
+    });
+    
+    document.addEventListener('touchmove', (e) => {
+      if (activeBody && activeBody.isDragging) {
+        const touch = e.touches[0];
+        const now = performance.now();
+        const newX = touch.clientX - activeBody.dragStartOffsetX;
+        const newY = touch.clientY - activeBody.dragStartOffsetY;
+        const dt = now - activeBody.lastDragTime;
+        if (dt > 0) {
+          activeBody.vx = ((newX - activeBody.lastDragX) / dt) * 1000;
+          activeBody.vy = ((newY - activeBody.lastDragY) / dt) * 1000;
+        }
+        activeBody.currentX = newX;
+        activeBody.currentY = newY;
+        activeBody.lastDragX = newX;
+        activeBody.lastDragY = newY;
+        activeBody.lastDragTime = now;
+        activeBody.updatePosition();
+      }
+    });
+    
+    // End dragging when pointer or touch is released.
+    document.addEventListener('mouseup', () => {
+      if (activeBody) {
+        activeBody.isDragging = false;
+        activeBody.element.style.cursor = 'grab';
+        activeBody = null;
+      }
+    });
+    
+    document.addEventListener('touchend', () => {
+      if (activeBody) {
+        activeBody.isDragging = false;
+        activeBody.element.style.cursor = 'grab';
+        activeBody = null;
+      }
+    });
+    
+    /********************************
+     * Physics Simulation Loop
+     ********************************/
+    let lastTime = performance.now();
+    function simulationLoop(timestamp) {
+      const dtSec = (timestamp - lastTime) / 1000;
+      lastTime = timestamp;
+      
+      // Update physics for each body.
+      bodies.forEach(body => {
+        if (!body.isDragging) {
+          // Update position based on velocity.
+          body.currentX += body.vx * dtSec;
+          body.currentY += body.vy * dtSec;
+          // Apply gravity.
+          body.vy += gravity * dtSec;
+          // Apply horizontal (air) friction.
+          body.vx *= airFriction;
+          
+          // Boundary collisions (relative to screen center).
+          const halfSize = SIZE / 2;
+          const centerX = window.innerWidth / 2;
+          const centerY = window.innerHeight / 2;
+          let leftEdge = centerX + body.currentX - halfSize;
+          let rightEdge = centerX + body.currentX + halfSize;
+          let topEdge = centerY + body.currentY - halfSize;
+          let bottomEdge = centerY + body.currentY + halfSize;
+          
+          // Bounce off the floor.
+          if (bottomEdge > window.innerHeight) {
+            body.currentY = window.innerHeight - centerY - halfSize;
+            body.vy = -body.vy * bounceFactor;
+            body.vx *= 0.9;
+          }
+          // Bounce off the ceiling.
+          if (topEdge < 0) {
+            body.currentY = -centerY + halfSize;
+            body.vy = -body.vy * bounceFactor;
+          }
+          // Bounce off the left wall.
+          if (leftEdge < 0) {
+            body.currentX = -centerX + halfSize;
+            body.vx = -body.vx * bounceFactor;
+          }
+          // Bounce off the right wall.
+          if (rightEdge > window.innerWidth) {
+            body.currentX = window.innerWidth - centerX - halfSize;
+            body.vx = -body.vx * bounceFactor;
+          }
+          
+          // Collision detection between bodies (using circle approximation)
+          bodies.forEach(other => {
+            if (body !== other) {
+              const dx = body.currentX - other.currentX;
+              const dy = body.currentY - other.currentY;
+              const distance = Math.hypot(dx, dy);
+              if (distance < body.radius + other.radius) {
+                const overlap = (body.radius + other.radius) - distance;
+                // Avoid division by zero.
+                const nx = (dx || 1) / (distance || 1);
+                const ny = (dy || 1) / (distance || 1);
+                // Separate the bodies.
+                body.currentX += nx * overlap / 2;
+                body.currentY += ny * overlap / 2;
+                other.currentX -= nx * overlap / 2;
+                other.currentY -= ny * overlap / 2;
+                
+                // Basic collision response: swap velocities (with damping).
+                let tempVx = body.vx;
+                let tempVy = body.vy;
+                body.vx = other.vx * bounceFactor;
+                body.vy = other.vy * bounceFactor;
+                other.vx = tempVx * bounceFactor;
+                other.vy = tempVy * bounceFactor;
+              }
+            }
+          });
+          
+          body.updatePosition();
+        }
+      });
+      
+      requestAnimationFrame(simulationLoop);
+    }
+    requestAnimationFrame(simulationLoop);
+    
+    /********************************
+     * Request Fullscreen on Load
+     ********************************/
+    window.addEventListener("load", function() {
+      document.documentElement.requestFullscreen().catch((err) => {
+         console.error("Error attempting to enable fullscreen mode:", err.message);
+      });
+    });
+  </script>
+</body>
+</html>

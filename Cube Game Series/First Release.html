@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>3D Physics Cube Playground</title>
+  <style>
+    /* Reset and layout */
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      height: 100%;
+    }
+    
+    /* Reactive 3D Background */
+    #background {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      /* A colorful gradient we can rotate on mouse move */
+      background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+      z-index: -1;
+      transform-style: preserve-3d;
+      transition: transform 0.1s ease-out;
+    }
+    
+    /* Scene container will hold all the cubes */
+    #scene {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+    
+    /* Cube styling */
+    .cube {
+      position: absolute;
+      width: 100px;
+      height: 100px;
+      left: 50%;
+      top: 50%;
+      transform-style: preserve-3d;
+      /* Center initially */
+      transform: translate(-50%, -50%);
+      cursor: grab;
+    }
+    
+    .cube div {
+      position: absolute;
+      width: 100px;
+      height: 100px;
+      background: rgba(0, 125, 255, 0.8);
+      border: 2px solid #fff;
+      box-sizing: border-box;
+    }
+    
+    /* Positioning for each face of the cube */
+    .front  { transform: translateZ(50px); }
+    .back   { transform: rotateY(180deg) translateZ(50px); }
+    .right  { transform: rotateY(90deg) translateZ(50px); }
+    .left   { transform: rotateY(-90deg) translateZ(50px); }
+    .top    { transform: rotateX(90deg) translateZ(50px); }
+    .bottom { transform: rotateX(-90deg) translateZ(50px); }
+    
+    /* Menu styling (upper left) */
+    .menu {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      background: rgba(0, 0, 0, 0.6);
+      padding: 10px;
+      border-radius: 8px;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    
+    .menu button {
+      background: #fff;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    
+    /* Settings panel styling */
+    .settings-panel {
+      position: fixed;
+      top: 10px;
+      left: 150px;
+      background: rgba(255, 255, 255, 0.9);
+      padding: 10px;
+      border-radius: 8px;
+      z-index: 100;
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+    }
+    
+    .settings-panel label {
+      display: flex;
+      flex-direction: column;
+      font-size: 0.9em;
+    }
+    
+    .settings-panel input[type="range"] {
+      width: 200px;
+    }
+    
+    .settings-panel.active {
+      display: flex;
+    }
+  </style>
+</head>
+<body>
+  <!-- A reactive background -->
+  <div id="background"></div>
+  
+  <!-- A simple menu -->
+  <div class="menu">
+    <button id="spawnButton">Spawn Cube</button>
+    <button id="toggleSettings">Toggle Settings</button>
+  </div>
+  
+  <!-- Settings panel for tweaking physics -->
+  <div class="settings-panel" id="settingsPanel">
+    <label>
+      Gravity:
+      <input type="range" id="gravitySlider" min="0" max="2000" value="980" />
+    </label>
+    <label>
+      Friction:
+      <input type="range" id="frictionSlider" min="0.90" max="1" step="0.01" value="0.99" />
+    </label>
+    <label>
+      Bounce:
+      <input type="range" id="bounceSlider" min="0" max="1" step="0.1" value="0.7" />
+    </label>
+  </div>
+  
+  <!-- The scene where cubes appear -->
+  <div id="scene"></div>
+  
+  <script>
+    /*******************************
+     * Global Physics Parameters
+     *******************************/
+    let gravity = 980;      // pixels per second²
+    let airFriction = 0.99; // horizontal damping
+    let bounceFactor = 0.7; // energy loss on bounce
+    
+    /*******************************
+     * Cube Management and Physics
+     *******************************/
+    const cubes = [];
+    let activeCube = null;
+    const scene = document.getElementById('scene');
+    
+    // Cube "class" to encapsulate state and behavior.
+    function Cube() {
+      this.element = document.createElement('div');
+      this.element.classList.add('cube');
+      this.element.innerHTML = `
+        <div class="front"></div>
+        <div class="back"></div>
+        <div class="right"></div>
+        <div class="left"></div>
+        <div class="top"></div>
+        <div class="bottom"></div>
+      `;
+      
+      // Initial physics state (position and velocity)
+      this.currentX = 0;
+      this.currentY = 0;
+      this.vx = 0;
+      this.vy = 0;
+      this.isDragging = false;
+      this.dragStartX = 0;
+      this.dragStartY = 0;
+      this.lastDragX = 0;
+      this.lastDragY = 0;
+      this.lastDragTime = performance.now();
+      
+      // Bind mouse and touch events to enable dragging.
+      this.element.addEventListener('mousedown', (e) => {
+        e.stopPropagation();
+        this.startDrag(e.clientX, e.clientY);
+      });
+      
+      this.element.addEventListener('touchstart', (e) => {
+        e.stopPropagation();
+        const touch = e.touches[0];
+        this.startDrag(touch.clientX, touch.clientY);
+      });
+      
+      scene.appendChild(this.element);
+      this.updatePosition();
+    }
+    
+    // Initiate drag on this cube.
+    Cube.prototype.startDrag = function(clientX, clientY) {
+      activeCube = this;
+      this.isDragging = true;
+      this.dragStartX = clientX - this.currentX;
+      this.dragStartY = clientY - this.currentY;
+      this.lastDragX = this.currentX;
+      this.lastDragY = this.currentY;
+      this.lastDragTime = performance.now();
+      this.element.style.cursor = 'grabbing';
+    };
+    
+    // Update the cube position using CSS transforms.
+    Cube.prototype.updatePosition = function() {
+      this.element.style.transform =
+        `translate(calc(-50% + ${this.currentX}px), calc(-50% + ${this.currentY}px))`;
+    };
+    
+    // Create and add a new cube to the scene.
+    function spawnCube() {
+      const cube = new Cube();
+      cubes.push(cube);
+    }
+    
+    /*******************************
+     * Global Drag Event Handlers
+     *******************************/
+    document.addEventListener('mousemove', (e) => {
+      if (activeCube && activeCube.isDragging) {
+        const now = performance.now();
+        const newX = e.clientX - activeCube.dragStartX;
+        const newY = e.clientY - activeCube.dragStartY;
+        const dt = now - activeCube.lastDragTime;
+        if (dt > 0) {
+          activeCube.vx = ((newX - activeCube.lastDragX) / dt) * 1000;
+          activeCube.vy = ((newY - activeCube.lastDragY) / dt) * 1000;
+        }
+        activeCube.currentX = newX;
+        activeCube.currentY = newY;
+        activeCube.lastDragX = newX;
+        activeCube.lastDragY = newY;
+        activeCube.lastDragTime = now;
+        activeCube.updatePosition();
+      }
+    });
+    
+    document.addEventListener('touchmove', (e) => {
+      if (activeCube && activeCube.isDragging) {
+        const touch = e.touches[0];
+        const now = performance.now();
+        const newX = touch.clientX - activeCube.dragStartX;
+        const newY = touch.clientY - activeCube.dragStartY;
+        const dt = now - activeCube.lastDragTime;
+        if (dt > 0) {
+          activeCube.vx = ((newX - activeCube.lastDragX) / dt) * 1000;
+          activeCube.vy = ((newY - activeCube.lastDragY) / dt) * 1000;
+        }
+        activeCube.currentX = newX;
+        activeCube.currentY = newY;
+        activeCube.lastDragX = newX;
+        activeCube.lastDragY = newY;
+        activeCube.lastDragTime = now;
+        activeCube.updatePosition();
+      }
+    });
+    
+    // End dragging when the pointer/touch is released.
+    document.addEventListener('mouseup', () => {
+      if (activeCube) {
+        activeCube.isDragging = false;
+        activeCube.element.style.cursor = 'grab';
+        activeCube = null;
+      }
+    });
+    
+    document.addEventListener('touchend', () => {
+      if (activeCube) {
+        activeCube.isDragging = false;
+        activeCube.element.style.cursor = 'grab';
+        activeCube = null;
+      }
+    });
+    
+    /*******************************
+     * Physics Simulation Loop
+     *******************************/
+    let lastTime = performance.now();
+    function simulationLoop(timestamp) {
+      const dtSec = (timestamp - lastTime) / 1000;
+      lastTime = timestamp;
+      
+      cubes.forEach(cube => {
+        if (!cube.isDragging) {
+          cube.currentX += cube.vx * dtSec;
+          cube.currentY += cube.vy * dtSec;
+          cube.vy += gravity * dtSec;
+          cube.vx *= airFriction;
+          
+          // Calculate cube boundaries relative to the window center.
+          const halfCube = 50; // half of 100px
+          const centerX = window.innerWidth / 2;
+          const centerY = window.innerHeight / 2;
+          const leftEdge   = centerX + cube.currentX - halfCube;
+          const rightEdge  = centerX + cube.currentX + halfCube;
+          const topEdge    = centerY + cube.currentY - halfCube;
+          const bottomEdge = centerY + cube.currentY + halfCube;
+          
+          // Bounce off the bottom.
+          if (bottomEdge > window.innerHeight) {
+            cube.currentY = window.innerHeight - centerY - halfCube;
+            cube.vy = -cube.vy * bounceFactor;
+            cube.vx *= 0.9;
+          }
+          // Bounce off the top.
+          if (topEdge < 0) {
+            cube.currentY = -centerY + halfCube;
+            cube.vy = -cube.vy * bounceFactor;
+          }
+          // Bounce off the left.
+          if (leftEdge < 0) {
+            cube.currentX = -centerX + halfCube;
+            cube.vx = -cube.vx * bounceFactor;
+          }
+          // Bounce off the right.
+          if (rightEdge > window.innerWidth) {
+            cube.currentX = window.innerWidth - centerX - halfCube;
+            cube.vx = -cube.vx * bounceFactor;
+          }
+          
+          cube.updatePosition();
+        }
+      });
+      
+      requestAnimationFrame(simulationLoop);
+    }
+    requestAnimationFrame(simulationLoop);
+    
+    /*******************************
+     * Reactive Background
+     *******************************/
+    document.addEventListener('mousemove', (e) => {
+      const bg = document.getElementById('background');
+      const xPercent = (e.clientX / window.innerWidth - 0.5) * 20;
+      const yPercent = (e.clientY / window.innerHeight - 0.5) * 20;
+      bg.style.transform = `rotateX(${yPercent}deg) rotateY(${xPercent}deg)`;
+    });
+    
+    /*******************************
+     * Menu and Settings Handlers
+     *******************************/
+    document.getElementById('spawnButton').addEventListener('click', spawnCube);
+    
+    document.getElementById('toggleSettings').addEventListener('click', () => {
+      const panel = document.getElementById('settingsPanel');
+      panel.classList.toggle('active');
+    });
+    
+    // Update physics parameters when slider values change.
+    document.getElementById('gravitySlider').addEventListener('input', (e) => {
+      gravity = parseFloat(e.target.value);
+    });
+    document.getElementById('frictionSlider').addEventListener('input', (e) => {
+      airFriction = parseFloat(e.target.value);
+    });
+    document.getElementById('bounceSlider').addEventListener('input', (e) => {
+      bounceFactor = parseFloat(e.target.value);
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Cube Simulation with Special Cubes, Achievements & Theme Toggle</title>
+  <!-- Google Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Open+Sans&display=swap" rel="stylesheet">
+  <style>
+    /* ========== Base Styles ========== */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Open Sans', sans-serif;
+      background: #1e1e2f;
+      color: #eee;
+      overflow: hidden;
+      transition: background 0.3s, color 0.3s;
+    }
+    canvas { display: block; }
+    
+    /* ========== Dark Theme (Default) ========== */
+    /* Settings Menu (Slide-out from Left) */
+    #menu {
+      position: fixed;
+      left: -320px;
+      top: 0;
+      width: 320px;
+      height: 100vh;
+      background: linear-gradient(135deg, #2c2c54, #474787);
+      color: inherit;
+      padding: 20px;
+      overflow-y: auto;
+      border-right: 3px solid #e84118;
+      transition: left 0.4s ease-in-out;
+      box-shadow: 2px 0 12px rgba(0,0,0,0.3);
+      z-index: 1000;
+    }
+    #menu.open { left: 0; }
+    #menu h2 {
+      text-align: center;
+      margin-bottom: 10px;
+      border-bottom: 1px solid #555;
+      padding-bottom: 5px;
+      font-size: 1.4em;
+    }
+    #menu label { display: block; margin: 10px 0 5px; font-size: 0.9em; }
+    #menu input[type="range"],
+    #menu input[type="color"],
+    #menu input[type="number"],
+    #menu input[type="text"] {
+      width: 100%;
+      margin-bottom: 10px;
+      padding: 5px;
+      border: none;
+      border-radius: 3px;
+    }
+    #menu input[type="checkbox"],
+    #menu input[type="radio"] { margin-right: 5px; }
+    #menu button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+      background: #e84118;
+      border: none;
+      border-radius: 3px;
+      color: #fff;
+      font-size: 1em;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+    #menu button:hover { background: #c23616; }
+    
+    /* Achievements Panel (Slide-out from Right) */
+    #achievements {
+      position: fixed;
+      right: -320px;
+      top: 0;
+      width: 320px;
+      height: 100vh;
+      background: linear-gradient(135deg, #2c2c54, #474787);
+      color: inherit;
+      padding: 20px;
+      overflow-y: auto;
+      border-left: 3px solid #e84118;
+      transition: right 0.4s ease-in-out;
+      box-shadow: -2px 0 12px rgba(0,0,0,0.3);
+      z-index: 1000;
+    }
+    #achievements.open { right: 0; }
+    #achievements h2 {
+      text-align: center;
+      margin-bottom: 10px;
+      border-bottom: 1px solid #555;
+      padding-bottom: 5px;
+      font-size: 1.4em;
+    }
+    #achievements ul { list-style: none; padding: 0; margin-top: 20px; }
+    #achievements ul li { margin: 10px 0; font-size: 0.95em; }
+    #achievements ul li.unlocked {
+      color: #00b894;
+      font-weight: bold;
+    }
+    
+    /* Change Cube Panel (Slide-up Popup) */
+    #changeCubePanel {
+      position: fixed;
+      left: 50%;
+      bottom: -300px;
+      transform: translateX(-50%);
+      width: 300px;
+      background: linear-gradient(135deg, #2c2c54, #474787);
+      color: inherit;
+      padding: 20px;
+      border: 3px solid #e84118;
+      border-radius: 8px;
+      transition: bottom 0.4s ease-in-out;
+      z-index: 1000;
+    }
+    #changeCubePanel.open { bottom: 20px; }
+    #changeCubePanel h2 { text-align: center; margin-bottom: 10px; }
+    #changeCubePanel button {
+      width: 100%;
+      padding: 10px;
+      margin: 5px 0;
+      background: #e84118;
+      border: none;
+      border-radius: 3px;
+      color: #fff;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+    #changeCubePanel button:hover { background: #c23616; }
+    
+    /* Achievement Popup */
+    #achievementPopup {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(232,65,24,0.9);
+      color: #fff;
+      padding: 20px 30px;
+      border-radius: 8px;
+      font-size: 1.2em;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.5s ease, visibility 0.5s ease;
+      z-index: 1200;
+    }
+    
+    /* Toggle Buttons */
+    #toggleMenu, #toggleAchievements, #toggleTheme {
+      position: fixed;
+      padding: 12px 20px;
+      background: #e84118;
+      border: none;
+      border-radius: 4px;
+      color: inherit;
+      cursor: pointer;
+      z-index: 1100;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      transition: background 0.3s ease;
+    }
+    #toggleMenu:hover, #toggleAchievements:hover, #toggleTheme:hover { background: #c23616; }
+    #toggleMenu { left: 20px; top: 20px; }
+    #toggleAchievements { right: 20px; top: 20px; }
+    #toggleTheme { left: 50%; top: 20px; transform: translateX(-50%); background: #3498db; }
+    #toggleTheme:hover { background: #2980b9; }
+  
+    /* Additional Toggle for "Change Cube" */
+    #toggleCubeType {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 12px 20px;
+      background: #e84118;
+      border: none;
+      border-radius: 4px;
+      color: inherit;
+      cursor: pointer;
+      z-index: 1100;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      transition: background 0.3s ease;
+    }
+    #toggleCubeType:hover { background: #c23616; }
+  
+    /* ========== Light Theme Overrides ========== */
+    body.light {
+      background: #f0f0f0;
+      color: #333;
+    }
+    body.light #menu {
+      background: #fff;
+      color: #333;
+      border-right: 3px solid #3498db;
+      box-shadow: 2px 0 12px rgba(0,0,0,0.2);
+    }
+    body.light #menu h2 { border-bottom: 1px solid #ccc; }
+    body.light #menu button { background: #3498db; }
+    body.light #menu button:hover { background: #2980b9; }
+    body.light #achievements {
+      background: #fff;
+      color: #333;
+      border-left: 3px solid #3498db;
+      box-shadow: -2px 0 12px rgba(0,0,0,0.2);
+    }
+    body.light #achievements h2 { border-bottom: 1px solid #ccc; }
+    body.light #toggleMenu,
+    body.light #toggleAchievements,
+    body.light #toggleTheme,
+    body.light #toggleCubeType {
+      background: #3498db;
+    }
+    body.light #toggleMenu:hover,
+    body.light #toggleAchievements:hover,
+    body.light #toggleTheme:hover,
+    body.light #toggleCubeType:hover {
+      background: #2980b9;
+    }
+    body.light #achievementPopup {
+      background: rgba(52,152,219,0.9);
+    }
+  </style>
+</head>
+<body>
+  <!-- Toggle Buttons -->
+  <div id="toggleMenu">Menu</div>
+  <div id="toggleAchievements">Achievements</div>
+  <div id="toggleTheme">Toggle Theme</div>
+  <div id="toggleCubeType">Change Cube</div>
+  
+  <!-- Settings Menu -->
+  <div id="menu">
+    <h2>Settings</h2>
+    <button id="closeMenu">Close Menu</button>
+    <!-- Gravity Settings -->
+    <label for="gravityX">Gravity X: <span id="gravityXVal">0</span></label>
+    <input type="range" id="gravityX" min="-1" max="1" step="0.01" value="0">
+    <label for="gravityY">Gravity Y: <span id="gravityYVal">1</span></label>
+    <input type="range" id="gravityY" min="-2" max="2" step="0.01" value="1">
+    <!-- Cube Properties -->
+    <label for="cubeSize">Cube Size: <span id="cubeSizeVal">40</span></label>
+    <input type="range" id="cubeSize" min="10" max="100" step="1" value="40">
+    <label for="cubeRestitution">Cube Restitution: <span id="cubeRestitutionVal">0.8</span></label>
+    <input type="range" id="cubeRestitution" min="0" max="1.5" step="0.01" value="0.8">
+    <label for="cubeFriction">Cube Friction: <span id="cubeFrictionVal">0.1</span></label>
+    <input type="range" id="cubeFriction" min="0" max="1" step="0.01" value="0.1">
+    <label for="cubeDensity">Cube Density: <span id="cubeDensityVal">0.001</span></label>
+    <input type="range" id="cubeDensity" min="0.001" max="0.1" step="0.001" value="0.001">
+    <label for="cubeAngular">Cube Angular Velocity: <span id="cubeAngularVal">0</span></label>
+    <input type="range" id="cubeAngular" min="-0.2" max="0.2" step="0.01" value="0">
+    <label for="cubeAngle">Cube Initial Angle (°): <span id="cubeAngleVal">0</span></label>
+    <input type="range" id="cubeAngle" min="0" max="360" step="1" value="0">
+    <!-- Spawn & Limit Settings -->
+    <label for="spawnInterval">Spawn Interval (ms): <span id="spawnIntervalVal">500</span></label>
+    <input type="range" id="spawnInterval" min="100" max="2000" step="100" value="500">
+    <label for="maxCubes">Max Cubes: <span id="maxCubesVal">20</span></label>
+    <input type="range" id="maxCubes" min="5" max="100" step="1" value="20">
+    <!-- Floor Settings -->
+    <label for="floorFriction">Floor Friction: <span id="floorFrictionVal">0.5</span></label>
+    <input type="range" id="floorFriction" min="0" max="1" step="0.01" value="0.5">
+    <label for="floorRestitution">Floor Restitution: <span id="floorRestitutionVal">0.2</span></label>
+    <input type="range" id="floorRestitution" min="0" max="1" step="0.01" value="0.2">
+    <!-- Simulation Speed & Other Physics -->
+    <label for="timeScale">Simulation Speed: <span id="timeScaleVal">1</span></label>
+    <input type="range" id="timeScale" min="0.1" max="2" step="0.1" value="1">
+    <label for="bounceThreshold">Bounce Threshold: <span id="bounceThresholdVal">20</span></label>
+    <input type="range" id="bounceThreshold" min="0" max="100" step="1" value="20">
+    <label for="airFriction">Air Friction: <span id="airFrictionVal">0.01</span></label>
+    <input type="range" id="airFriction" min="0" max="0.1" step="0.001" value="0.01">
+    <!-- Color Settings -->
+    <label for="cubeColor">Cube Color:</label>
+    <input type="color" id="cubeColor" value="#ff0000">
+    <label for="floorColor">Floor Color:</label>
+    <input type="color" id="floorColor" value="#00ff00">
+    <label for="bgColor">Background Color:</label>
+    <input type="color" id="bgColor" value="#222222">
+    <!-- New UI Colour Changer -->
+    <label for="uiColor">UI Colour:</label>
+    <input type="color" id="uiColor" value="#eee">
+    <!-- Sound Toggle -->
+    <label><input type="checkbox" id="soundToggle" checked> Enable Collision Sound</label>
+    <!-- Tool Mode Selection -->
+    <label>Tool Mode:</label>
+    <label><input type="radio" name="toolMode" value="spawn" checked> Spawn Tool</label>
+    <label><input type="radio" name="toolMode" value="drag"> Drag Tool</label>
+    <label><input type="radio" name="toolMode" value="slingshot"> Slingshot Tool</label>
+    <!-- Dedicated Slingshot Setting -->
+    <label for="slingshotStrength">Slingshot Strength: <span id="slingshotStrengthVal">0.0005</span></label>
+    <input type="range" id="slingshotStrength" min="0.0001" max="0.005" step="0.0001" value="0.0005">
+    <!-- Additional Toggles -->
+    <label><input type="checkbox" id="spawnOnClick" checked> Spawn on Click</label>
+    <label><input type="checkbox" id="autoSpawn" checked> Auto Spawn Cubes</label>
+    <!-- Reset and Clear Buttons -->
+    <button id="resetSettings">Reset All Settings</button>
+    <button id="clearCubes">Clear Cubes</button>
+  </div>
+  
+  <!-- Achievements Panel -->
+  <div id="achievements">
+    <h2>Achievements</h2>
+    <button id="closeAchievements">Close</button>
+    <ul>
+      <li id="achievement_playFive">Play for 5 Minutes: Locked</li>
+      <li id="achievement_changeColor">Change Your Cube's Colour: Locked</li>
+      <li id="achievement_gravityManip">Gravity Manipulator: Locked</li>
+      <li id="achievement_speedDemon">Speed Demon: Locked</li>
+      <li id="achievement_clearItOut">Clear It Out: Locked</li>
+      <li id="achievement_chainReaction">Chain Reaction: Locked</li>
+      <li id="achievement_slingshotAce">Slingshot Ace: Locked</li>
+      <li id="achievement_cubeOverload">Cube Overload: Locked</li>
+      <li id="achievement_gravityGuru">Gravity Guru: Locked</li>
+      <li id="achievement_perfectReset">Perfect Reset: Locked</li>
+    </ul>
+  </div>
+  
+  <!-- Change Cube Panel -->
+  <div id="changeCubePanel">
+    <h2>Choose Cube Type</h2>
+    <button class="cubeTypeOption" data-type="regular">Regular Cube</button>
+    <button class="cubeTypeOption" data-type="fire">Fire Cube</button>
+    <button class="cubeTypeOption" data-type="floating">Floating Cube</button>
+    <button id="closeCubePanel">Close</button>
+  </div>
+  
+  <!-- Achievement Popup -->
+  <div id="achievementPopup"></div>
+  
+  <!-- Render Canvas -->
+  <canvas id="canvas"></canvas>
+  
+  <!-- Audio Elements -->
+  <audio id="collisionSound" src="audio/myCustomCollisionSound.mp3"></audio>
+  <audio id="spawnSound" src="audio/myCustomSpawnSound.mp3"></audio>
+  
+  <!-- Matter.js Library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+  <script>
+    /******************************
+      Simulation, Achievements, Cube Types & Theme Toggle JS
+    ******************************/
+  
+    // Module aliases from Matter.js
+    const Engine = Matter.Engine,
+          Render = Matter.Render,
+          Runner = Matter.Runner,
+          Bodies = Matter.Bodies,
+          Composite = Matter.Composite,
+          Body = Matter.Body,
+          Mouse = Matter.Mouse,
+          MouseConstraint = Matter.MouseConstraint,
+          Events = Matter.Events,
+          Query = Matter.Query;
+  
+    // Create engine and world
+    const engine = Engine.create();
+    const world = engine.world;
+  
+    // Setup renderer
+    const canvas = document.getElementById('canvas');
+    const render = Render.create({
+      canvas: canvas,
+      engine: engine,
+      options: {
+        width: window.innerWidth,
+        height: window.innerHeight,
+        wireframes: false,
+        background: document.getElementById('bgColor').value
+      }
+    });
+    Render.run(render);
+    const runner = Runner.create();
+    Runner.run(runner, engine);
+  
+    // Setup mouse and mouseConstraint (for drag tool)
+    const mouse = Mouse.create(render.canvas);
+    let mouseConstraint = MouseConstraint.create(engine, {
+      mouse: mouse,
+      constraint: { stiffness: 0.2, render: { visible: false } }
+    });
+    let mouseConstraintAdded = false;
+    render.mouse = mouse;
+  
+    // Global variables for tool mode and slingshot
+    let currentToolMode = "spawn";
+    let isSlingshotActive = false;
+    let slingshotCube = null;
+    let slingshotStartPos = null;
+    let slingshotCurrentPos = null;
+  
+    // Global variable for current cube type (default: regular)
+    let currentCubeType = "regular";
+  
+    // --- ACHIEVEMENTS VARIABLES & COUNTERS ---
+    const gameStartTime = Date.now();
+    const defaultCubeColor = "#ff0000";
+    let totalCubesSpawned = 0;  
+    let gravityChangeCount = 0;
+    let speedDemonTime = 0;
+    let clearPressCount = 0;
+    let perfectResetCount = 0;
+  
+    let achievementsUnlocked = {
+      playFive: false,
+      changeColor: false,
+      gravityManip: false,
+      speedDemon: false,
+      clearItOut: false,
+      chainReaction: false,
+      slingshotAce: false,
+      cubeOverload: false,
+      gravityGuru: false,
+      perfectReset: false
+    };
+  
+    // Function to show achievement popup
+    function showPopup(message) {
+      const popup = document.getElementById('achievementPopup');
+      popup.textContent = message;
+      popup.style.opacity = "1";
+      popup.style.visibility = "visible";
+      setTimeout(() => {
+        popup.style.opacity = "0";
+        popup.style.visibility = "hidden";
+      }, 2000);
+    }
+  
+    // Function to unlock an achievement
+    function unlockAchievement(key, name) {
+      if (!achievementsUnlocked[key]) {
+        achievementsUnlocked[key] = true;
+        const li = document.getElementById("achievement_" + key);
+        if (li) {
+          li.textContent = name + ": Unlocked";
+          li.classList.add("unlocked");
+        }
+        showPopup("Achievement Unlocked: " + name);
+      }
+    }
+  
+    // Check for "Play for 5 Minutes" achievement
+    setInterval(() => {
+      const elapsed = (Date.now() - gameStartTime) / 1000;
+      if (elapsed >= 300) {
+        unlockAchievement("playFive", "Play for 5 Minutes");
+      }
+    }, 1000);
+  
+    // "Change Your Cube's Colour" achievement
+    document.getElementById('cubeColor').addEventListener('change', function() {
+      if (this.value.toLowerCase() !== defaultCubeColor && !achievementsUnlocked.changeColor) {
+        unlockAchievement("changeColor", "Change Your Cube's Colour");
+      }
+    });
+  
+    // Monitor gravity changes for "Gravity Manipulator" and "Gravity Guru"
+    function checkGravityGuru() {
+      let gx = parseFloat(document.getElementById('gravityX').value);
+      let gy = parseFloat(document.getElementById('gravityY').value);
+      if (gx !== 0 && gy !== 1 && !achievementsUnlocked.gravityGuru) {
+        unlockAchievement("gravityGuru", "Gravity Guru");
+      }
+    }
+    document.getElementById('gravityX').addEventListener('input', () => {
+      if (document.getElementById('gravityX').value != 0) {
+        gravityChangeCount++;
+        if (gravityChangeCount >= 5) {
+          unlockAchievement("gravityManip", "Gravity Manipulator");
+        }
+      }
+      checkGravityGuru();
+    });
+    document.getElementById('gravityY').addEventListener('input', () => {
+      if (document.getElementById('gravityY').value != 1) {
+        gravityChangeCount++;
+        if (gravityChangeCount >= 5) {
+          unlockAchievement("gravityManip", "Gravity Manipulator");
+        }
+      }
+      checkGravityGuru();
+    });
+  
+    // "Speed Demon" achievement: Time Scale > 1.5 for 10 consecutive seconds
+    setInterval(() => {
+      const timeScale = parseFloat(document.getElementById('timeScale').value);
+      if (timeScale > 1.5) {
+        speedDemonTime++;
+      } else { speedDemonTime = 0; }
+      if (speedDemonTime >= 10) {
+        unlockAchievement("speedDemon", "Speed Demon");
+      }
+    }, 1000);
+  
+    // "Clear It Out": Clear Cubes button pressed 3+ times
+    document.getElementById('clearCubes').addEventListener('click', () => {
+      clearPressCount++;
+      if (clearPressCount >= 3) {
+        unlockAchievement("clearItOut", "Clear It Out");
+      }
+    });
+  
+    // --- TOOL MODE HANDLING ---
+    document.querySelectorAll('input[name="toolMode"]').forEach(radio => {
+      radio.addEventListener('change', () => {
+        currentToolMode = document.querySelector('input[name="toolMode"]:checked').value;
+        if (currentToolMode === "drag") {
+          if (!mouseConstraintAdded) {
+            Composite.add(world, mouseConstraint);
+            mouseConstraintAdded = true;
+          }
+          isSlingshotActive = false;
+          slingshotCube = null;
+        } else {
+          if (mouseConstraintAdded) {
+            Composite.remove(world, mouseConstraint);
+            mouseConstraintAdded = false;
+          }
+          if (currentToolMode !== "slingshot") {
+            isSlingshotActive = false;
+            slingshotCube = null;
+          }
+        }
+      });
+    });
+  
+    // --- SETTINGS & ACHIEVEMENTS TOGGLES ---
+    const menu = document.getElementById('menu');
+    const toggleMenuButton = document.getElementById('toggleMenu');
+    const closeMenuButton = document.getElementById('closeMenu');
+    toggleMenuButton.addEventListener('click', () => {
+      menu.classList.add('open');
+      toggleMenuButton.style.display = 'none';
+    });
+    closeMenuButton.addEventListener('click', () => {
+      menu.classList.remove('open');
+      toggleMenuButton.style.display = 'block';
+    });
+  
+    const achievementsTab = document.getElementById('achievements');
+    const toggleAchievementsButton = document.getElementById('toggleAchievements');
+    const closeAchievementsButton = document.getElementById('closeAchievements');
+    toggleAchievementsButton.addEventListener('click', () => {
+      achievementsTab.classList.add('open');
+      toggleAchievementsButton.style.display = 'none';
+    });
+    closeAchievementsButton.addEventListener('click', () => {
+      achievementsTab.classList.remove('open');
+      toggleAchievementsButton.style.display = 'block';
+    });
+  
+    // --- THEME TOGGLE ---
+    const toggleThemeButton = document.getElementById('toggleTheme');
+    toggleThemeButton.addEventListener('click', () => {
+      document.body.classList.toggle("light");
+    });
+  
+    // --- CHANGE CUBE PANEL (for Special Cubes) ---
+    const toggleCubeTypeButton = document.getElementById('toggleCubeType');
+    const changeCubePanel = document.getElementById('changeCubePanel');
+    const closeCubePanelButton = document.getElementById('closeCubePanel');
+    toggleCubeTypeButton.addEventListener('click', () => {
+      changeCubePanel.classList.add('open');
+    });
+    closeCubePanelButton.addEventListener('click', () => {
+      changeCubePanel.classList.remove('open');
+    });
+    // Cube type options event listeners
+    document.querySelectorAll('.cubeTypeOption').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const newType = this.getAttribute("data-type");
+        currentCubeType = newType;
+        showPopup("Cube Type set to " + newType.charAt(0).toUpperCase() + newType.slice(1));
+        changeCubePanel.classList.remove("open");
+      });
+    });
+  
+    // --- UI Colour Changer ---
+    document.getElementById('uiColor').addEventListener('input', function() {
+      const newColor = this.value;
+      document.body.style.color = newColor;
+      document.getElementById('menu').style.color = newColor;
+      document.getElementById('achievements').style.color = newColor;
+      toggleMenuButton.style.color = newColor;
+      toggleAchievementsButton.style.color = newColor;
+      toggleThemeButton.style.color = newColor;
+      toggleCubeTypeButton.style.color = newColor;
+    });
+  
+    // --- Create Boundaries ---
+    let boundaries = [];
+    function createBoundaries() {
+      boundaries.forEach(b => Composite.remove(world, b));
+      boundaries = [];
+      const floor = Bodies.rectangle(
+        window.innerWidth / 2,
+        window.innerHeight + 25,
+        window.innerWidth,
+        50,
+        {
+          isStatic: true,
+          friction: parseFloat(document.getElementById('floorFriction').value),
+          restitution: parseFloat(document.getElementById('floorRestitution').value),
+          render: { fillStyle: document.getElementById('floorColor').value }
+        }
+      );
+      const ceiling = Bodies.rectangle(window.innerWidth / 2, -25, window.innerWidth, 50, { isStatic: true });
+      const leftWall = Bodies.rectangle(-25, window.innerHeight / 2, 50, window.innerHeight, { isStatic: true });
+      const rightWall = Bodies.rectangle(window.innerWidth + 25, window.innerHeight / 2, 50, window.innerHeight, { isStatic: true });
+      boundaries.push(floor, ceiling, leftWall, rightWall);
+      Composite.add(world, boundaries);
+    }
+    createBoundaries();
+    window.addEventListener('resize', () => {
+      render.canvas.width = window.innerWidth;
+      render.canvas.height = window.innerHeight;
+      createBoundaries();
+    });
+  
+    // --- Cube Spawning and Auto-spawn ---
+    const cubes = [];
+    let cubeInterval;
+    function spawnCube() {
+      const maxCubes = parseInt(document.getElementById('maxCubes').value, 10);
+      if (cubes.length >= maxCubes) return;
+      const size = parseInt(document.getElementById('cubeSize').value, 10);
+      const restitution = parseFloat(document.getElementById('cubeRestitution').value);
+      const friction = parseFloat(document.getElementById('cubeFriction').value);
+      const density = parseFloat(document.getElementById('cubeDensity').value);
+      const angVel = parseFloat(document.getElementById('cubeAngular').value);
+      const angleRadians = (parseFloat(document.getElementById('cubeAngle').value) * Math.PI) / 180;
+      const color = document.getElementById('cubeColor').value;
+  
+      const cube = Bodies.rectangle(
+        Math.random() * window.innerWidth,
+        -size,
+        size,
+        size,
+        {
+          angle: angleRadians,
+          restitution: restitution,
+          friction: friction,
+          density: density,
+          frictionAir: parseFloat(document.getElementById('airFriction').value),
+          render: { fillStyle: color }
+        }
+      );
+      Body.setAngularVelocity(cube, angVel);
+      // Apply special cube type based on selection
+      cube.customType = currentCubeType;  // "regular", "fire", or "floating"
+      cubes.push(cube);
+      Composite.add(world, cube);
+  
+      // "Cube Overload": when cubes on screen equal max cubes
+      if (cubes.length === maxCubes) {
+        unlockAchievement("cubeOverload", "Cube Overload");
+      }
+  
+      // Play spawn sound if available
+      const spawnSound = document.getElementById('spawnSound');
+      if (spawnSound) {
+        spawnSound.currentTime = 0;
+        spawnSound.play().catch(err => console.log('Spawn sound error:', err));
+      }
+    }
+  
+    function clearCubes() {
+      cubes.forEach(cube => Composite.remove(world, cube));
+      cubes.length = 0;
+      clearPressCount++;
+      if (clearPressCount >= 3) {
+        unlockAchievement("clearItOut", "Clear It Out");
+      }
+    }
+  
+    // --- Input Display Update ---
+    const inputsSettings = [
+      ['gravityX', 'gravityXVal'],
+      ['gravityY', 'gravityYVal'],
+      ['cubeSize', 'cubeSizeVal'],
+      ['cubeRestitution', 'cubeRestitutionVal'],
+      ['cubeFriction', 'cubeFrictionVal'],
+      ['cubeDensity', 'cubeDensityVal'],
+      ['cubeAngular', 'cubeAngularVal'],
+      ['cubeAngle', 'cubeAngleVal'],
+      ['spawnInterval', 'spawnIntervalVal'],
+      ['maxCubes', 'maxCubesVal'],
+      ['floorFriction', 'floorFrictionVal'],
+      ['floorRestitution', 'floorRestitutionVal'],
+      ['timeScale', 'timeScaleVal'],
+      ['bounceThreshold', 'bounceThresholdVal'],
+      ['airFriction', 'airFrictionVal'],
+      ['slingshotStrength', 'slingshotStrengthVal']
+    ];
+    inputsSettings.forEach(pair => {
+      const [inputId, valueId] = pair;
+      document.getElementById(inputId).addEventListener('input', () => {
+        document.getElementById(valueId).innerText = document.getElementById(inputId).value;
+        if (["floorFriction", "floorRestitution", "floorColor", "bgColor"].includes(inputId)) {
+          createBoundaries();
+          render.options.background = document.getElementById('bgColor').value;
+        }
+      });
+    });
+    document.getElementById('floorColor').addEventListener('change', createBoundaries);
+    document.getElementById('bgColor').addEventListener('change', () => {
+      render.options.background = document.getElementById('bgColor').value;
+    });
+  
+    // --- Gravity & Time Scale Adjustments ---
+    function updateGravity() {
+      engine.world.gravity.x = parseFloat(document.getElementById('gravityX').value);
+      engine.world.gravity.y = parseFloat(document.getElementById('gravityY').value);
+    }
+    document.getElementById('gravityX').addEventListener('input', updateGravity);
+    document.getElementById('gravityY').addEventListener('input', updateGravity);
+    document.getElementById('timeScale').addEventListener('input', (e) => {
+      engine.timing.timeScale = parseFloat(e.target.value);
+    });
+  
+    // --- Auto-spawn Cubes ---
+    function startAutoSpawn() {
+      clearInterval(cubeInterval);
+      cubeInterval = setInterval(() => {
+        if (document.getElementById('autoSpawn').checked) {
+          spawnCube();
+        }
+      }, parseInt(document.getElementById('spawnInterval').value, 10));
+    }
+    document.getElementById('spawnInterval').addEventListener('input', startAutoSpawn);
+    document.getElementById('autoSpawn').addEventListener('change', () => {
+      if (document.getElementById('autoSpawn').checked) startAutoSpawn();
+      else clearInterval(cubeInterval);
+    });
+    startAutoSpawn();
+  
+    // Spawn cube on canvas click for Spawn Tool
+    window.addEventListener('click', (e) => {
+      if (e.target.closest('#menu') ||
+          e.target.closest('#achievements') ||
+          e.target.closest('#changeCubePanel') ||
+          e.target.id === 'toggleMenu' ||
+          e.target.id === 'toggleAchievements' ||
+          e.target.id === 'toggleTheme' ||
+          e.target.id === 'toggleCubeType'
+         ) return;
+      if (currentToolMode === "spawn" && document.getElementById('spawnOnClick').checked) {
+        const size = parseInt(document.getElementById('cubeSize').value, 10);
+        const restitution = parseFloat(document.getElementById('cubeRestitution').value);
+        const friction = parseFloat(document.getElementById('cubeFriction').value);
+        const density = parseFloat(document.getElementById('cubeDensity').value);
+        const angVel = parseFloat(document.getElementById('cubeAngular').value);
+        const angleRadians = (parseFloat(document.getElementById('cubeAngle').value) * Math.PI) / 180;
+        const color = document.getElementById('cubeColor').value;
+  
+        const cube = Bodies.rectangle(e.clientX, e.clientY, size, size, {
+          angle: angleRadians,
+          restitution: restitution,
+          friction: friction,
+          density: density,
+          frictionAir: parseFloat(document.getElementById('airFriction').value),
+          render: { fillStyle: color }
+        });
+        Body.setAngularVelocity(cube, angVel);
+        cube.customType = currentCubeType;
+        cubes.push(cube);
+        Composite.add(world, cube);
+      }
+    });
+  
+    // --- Special Cube Behaviors ---
+    // Fire Cube: Destroys any cube it touches (if other cube isn't fire)
+    Events.on(engine, 'collisionStart', function(event) {
+      event.pairs.forEach(pair => {
+        const { bodyA, bodyB } = pair;
+        if (bodyA.customType === "fire" && bodyB.customType !== "fire") {
+          Composite.remove(world, bodyB);
+        } else if (bodyB.customType === "fire" && bodyA.customType !== "fire") {
+          Composite.remove(world, bodyA);
+        }
+      });
+      // Check for Chain Reaction achievement
+      if (event.pairs.length >= 3) {
+        unlockAchievement("chainReaction", "Chain Reaction");
+      }
+      // Play collision sound
+      if (document.getElementById('soundToggle').checked && event.pairs.length > 0) {
+        const sound = document.getElementById('collisionSound');
+        sound.currentTime = 0;
+        sound.play().catch(err => console.log('Sound play error:', err));
+      }
+    });
+  
+    // Floating Cube Behavior: Cancel out gravity for cubes with customType "floating"
+    Events.on(engine, 'beforeUpdate', function() {
+      world.bodies.forEach(body => {
+        if (body.customType === "floating") {
+          const g = engine.world.gravity; 
+          Body.applyForce(body, body.position, { x: -g.x * body.mass, y: -g.y * body.mass });
+        }
+      });
+    });
+  
+    // Slingshot Tool Events
+    render.canvas.addEventListener('mousedown', function(e) {
+      if (currentToolMode !== "slingshot") return;
+      const mousePos = { x: e.clientX, y: e.clientY };
+      const bodies = Query.point(cubes, mousePos);
+      if (bodies.length > 0) {
+        slingshotCube = bodies[0];
+        isSlingshotActive = true;
+        slingshotStartPos = mousePos;
+      }
+    });
+    render.canvas.addEventListener('mousemove', function(e) {
+      if (currentToolMode !== "slingshot" || !isSlingshotActive) return;
+      slingshotCurrentPos = { x: e.clientX, y: e.clientY };
+    });
+    render.canvas.addEventListener('mouseup', function(e) {
+      if (currentToolMode !== "slingshot" || !isSlingshotActive || !slingshotCube) return;
+      const releasePos = { x: e.clientX, y: e.clientY };
+      const strength = parseFloat(document.getElementById('slingshotStrength').value);
+      const forceVector = {
+        x: (slingshotStartPos.x - releasePos.x) * strength,
+        y: (slingshotStartPos.y - releasePos.y) * strength
+      };
+      const magnitude = Math.sqrt(forceVector.x * forceVector.x + forceVector.y * forceVector.y);
+      if (magnitude > 0.005) {
+        unlockAchievement("slingshotAce", "Slingshot Ace");
+      }
+      Body.applyForce(slingshotCube, slingshotCube.position, forceVector);
+      isSlingshotActive = false;
+      slingshotCube = null;
+    });
+  
+    // Visual guide for slingshot
+    (function renderSlingshotGuide() {
+      const context = render.context;
+      requestAnimationFrame(renderSlingshotGuide);
+      if (currentToolMode === "slingshot" && isSlingshotActive && slingshotStartPos && slingshotCurrentPos) {
+        context.beginPath();
+        context.moveTo(slingshotStartPos.x, slingshotStartPos.y);
+        context.lineTo(slingshotCurrentPos.x, slingshotCurrentPos.y);
+        context.strokeStyle = '#ffffff';
+        context.lineWidth = 2;
+        context.stroke();
+      }
+    })();
+  
+    // Monitor "Cube Overload" Achievement (when cubes count equals max cubes)
+    setInterval(() => {
+      const maxCubes = parseInt(document.getElementById('maxCubes').value, 10);
+      if (cubes.length === maxCubes) {
+        unlockAchievement("cubeOverload", "Cube Overload");
+      }
+    }, 1000);
+  
+    // --- UI Colour Changer ---
+    document.getElementById('uiColor').addEventListener('input', function() {
+      const newColor = this.value;
+      document.body.style.color = newColor;
+      document.getElementById('menu').style.color = newColor;
+      document.getElementById('achievements').style.color = newColor;
+      toggleMenuButton.style.color = newColor;
+      toggleAchievementsButton.style.color = newColor;
+      toggleThemeButton.style.color = newColor;
+      toggleCubeTypeButton.style.color = newColor;
+    });
+  
+    // --- Change Cube Panel: Cube Type Customization ---
+    // Default type is "regular"
+    currentCubeType = "regular";
+    // In spawnCube function, each newly spawned cube gets property cube.customType = currentCubeType.
+  
+    // --- Perfect Reset Achievement ---
+    document.getElementById('resetSettings').addEventListener('click', () => {
+      document.getElementById('gravityX').value = 0;
+      document.getElementById('gravityY').value = 1;
+      document.getElementById('cubeSize').value = 40;
+      document.getElementById('cubeRestitution').value = 0.8;
+      document.getElementById('cubeFriction').value = 0.1;
+      document.getElementById('cubeDensity').value = 0.001;
+      document.getElementById('cubeAngular').value = 0;
+      document.getElementById('cubeAngle').value = 0;
+      document.getElementById('spawnInterval').value = 500;
+      document.getElementById('maxCubes').value = 20;
+      document.getElementById('floorFriction').value = 0.5;
+      document.getElementById('floorRestitution').value = 0.2;
+      document.getElementById('timeScale').value = 1;
+      document.getElementById('bounceThreshold').value = 20;
+      document.getElementById('airFriction').value = 0.01;
+      document.getElementById('cubeColor').value = "#ff0000";
+      document.getElementById('floorColor').value = "#00ff00";
+      document.getElementById('bgColor').value = "#222222";
+      document.getElementById('slingshotStrength').value = 0.0005;
+  
+      document.getElementById('soundToggle').checked = true;
+      document.getElementById('spawnOnClick').checked = true;
+      document.getElementById('autoSpawn').checked = true;
+  
+      document.querySelector('input[name="toolMode"][value="spawn"]').checked = true;
+      currentToolMode = "spawn";
+      if (mouseConstraintAdded) {
+        Composite.remove(world, mouseConstraint);
+        mouseConstraintAdded = false;
+      }
+      isSlingshotActive = false;
+      slingshotCube = null;
+  
+      inputsSettings.forEach(pair => {
+        const [inputId, valueId] = pair;
+        document.getElementById(valueId).innerText = document.getElementById(inputId).value;
+      });
+  
+      updateGravity();
+      createBoundaries();
+      render.options.background = document.getElementById('bgColor').value;
+  
+      perfectResetCount++;
+      if (perfectResetCount >= 5) {
+        unlockAchievement("perfectReset", "Perfect Reset");
+      }
+    });
+  
+  </script>
+</body>
+</html>

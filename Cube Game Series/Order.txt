@@ -1,0 +1,4 @@
+Cube Game Ultimate=latest
+Cube Game Beta=2cnd latest
+Cube Game Collisions=3rd
+First Releas=first release
